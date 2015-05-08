@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /*
- * LessLinter
+ * StyleLinter
  * based on CSSLint cli.js
+ * using https://www.npmjs.com/package/less
+ * using https://www.npmjs.com/package/node-sass
  */
 
 /*!
@@ -32,15 +34,18 @@
 function cli(api) {
 
   var globalOptions = {
-    "help"        : { "format" : "",                       "description" : "Displays this information."},
-    "format"      : { "format" : "<format>",               "description" : "Indicate which format to use for output."},
-    "list-rules"  : { "format" : "",                       "description" : "Outputs all of the rules available."},
-    "quiet"       : { "format" : "",                       "description" : "Only output when errors are present."},
-    "errors"      : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to include as errors."},
-    "warnings"    : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to include as warnings."},
-    "ignore"      : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to ignore completely."},
-    "exclude-list": { "format" : "<file|dir[,file|dir]+>", "description" : "Indicate which files/directories to exclude from being linted."},
-    "version"     : { "format" : "",                       "description" : "Outputs the current version number."}
+    "help": {"format": "", "description": "Displays this information."},
+    "format": {"format": "<format>", "description": "Indicate which format to use for output."},
+    "list-rules": {"format": "", "description": "Outputs all of the rules available."},
+    "quiet": {"format": "", "description": "Only output when errors are present."},
+    "errors": {"format": "<rule[,rule]+>", "description": "Indicate which rules to include as errors."},
+    "warnings": {"format": "<rule[,rule]+>", "description": "Indicate which rules to include as warnings."},
+    "ignore": {"format": "<rule[,rule]+>", "description": "Indicate which rules to ignore completely."},
+    "exclude-list": {
+      "format": "<file|dir[,file|dir]+>",
+      "description": "Indicate which files/directories to exclude from being linted."
+    },
+    "version": {"format": "", "description": "Outputs the current version number."}
   };
 
   //-------------------------------------------------------------------------
@@ -170,8 +175,8 @@ function cli(api) {
     }
 
     var rules = gatherRules(options, filterRules(options));
-    var lessLinter = new LessLinter(relativeFilePath, input, rules, options);
-    var lintOutput = lessLinter.lint();
+    var ssLinter = new SSLinter(relativeFilePath, input, rules, options);
+    var lintOutput = ssLinter.lint();
 
     if (lintOutput.error) {
       printError(formatter, relativeFilePath, lintOutput.error.message);
@@ -184,8 +189,20 @@ function cli(api) {
 
     options.fullPath = api.getFullPath(relativeFilePath);
 
-    var output = formatter.formatResults(result, relativeFilePath, options);
-    if (output) api.print(output);
+    var messageGroups = _.groupBy(result.messages, function (elem) {
+      return elem.sourceFile ? elem.sourceFile : relativeFilePath;
+    });
+
+    var output = "";
+
+    for (var filePath in messageGroups) if (messageGroups.hasOwnProperty(filePath)) {
+      var tmpResult = _.clone(result, true);
+      tmpResult.messages = messageGroups[filePath];
+
+      output += formatter.formatResults(tmpResult, filePath, options);
+    }
+
+    if (output && output != "") api.print(output);
 
     if (result.messages.length > 0 && pluckByType(result.messages, "error").length > 0) {
       exitCode = 3;
@@ -205,7 +222,7 @@ function cli(api) {
     if (formatter.readError) {
       api.print(formatter.readError(filePath, message));
     } else {
-      api.print("lesslinter:" + filePath + ":> " + message);
+      api.print("sslinter:" + filePath + ":> " + message);
     }
   }
 
@@ -220,7 +237,7 @@ function cli(api) {
       formatString = '';
 
     api.print([
-      "\nUsage: lesslinter [options]* [file|dir]*",
+      "\nUsage: sslinter [options]* [file|dir]*",
       " ",
       "Global Options"
     ].join("\n"));
@@ -260,11 +277,11 @@ function cli(api) {
       output;
 
     if (!files.length) {
-      api.print("lesslinter: No files specified.");
+      api.print("sslinter: No files specified.");
       exitCode = 1;
     } else {
       if (!CSSLint.hasFormat(formatId)) {
-        api.print("lesslinter: Unknown format '" + formatId + "'. Cannot proceed.");
+        api.print("sslinter: Unknown format '" + formatId + "'. Cannot proceed.");
         exitCode = 1;
       } else {
         formatter = CSSLint.getFormatter(formatId);
@@ -368,7 +385,7 @@ function cli(api) {
   validateOptions(options);
 
   if (options.version) {
-    api.print("LessLinter=v" + appVersion);
+    api.print("SSLinter=v" + appVersion);
     api.print("CSSLint=v" + CSSLint.version);
     api.quit(0);
   }
@@ -382,7 +399,7 @@ function cli(api) {
 }
 
 /*
- * LessLinter Node.js Command Line Interface
+ * StyleSheetLinter Node.js Command Line Interface
  */
 
 require('pkginfo')(module, 'version');
@@ -390,9 +407,10 @@ var appVersion = module.exports.version;
 
 var fs = require("fs");
 var path = require("path");
+var _ = require("lodash");
 
 var CSSLint = require('./lib/csslint-extended').CSSLint;
-var LessLinter = require('./lib/lesslinter');
+var SSLinter = require('./lib/stylesheetlinter');
 
 cli({
   args: process.argv.slice(2),
@@ -430,7 +448,7 @@ cli({
           stat = fs.statSync(path);
 
         if (file[0] == ".") return;
-        else if (stat.isFile() && /\.(css|less)$/.test(file)) files.push(path);
+        else if (stat.isFile() && /\.(css|less|scss)$/.test(file)) files.push(path);
         else if (stat.isDirectory()) traverse(file, stack);
       });
 

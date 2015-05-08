@@ -7,32 +7,34 @@
 
   var SourceMapConsumer = require('source-map').SourceMapConsumer;
 
-  var LessFile = require('./less-file').LessFile;
+  var StyleFile = require('./style-file').LessFile;
 
-  function LessLinter(file, contents, rules, options) {
+  function StyleLinter(file, contents, rules, options) {
     this.fileSrc = file;
     this.fileContents = contents;
     this.rules = rules;
     this.options = options;
   }
 
-  LessLinter.prototype.lint = function () {
+  StyleLinter.prototype.lint = function () {
     var _this = this;
 
     _.assign(_this.options, {
       less: {},
+      sass: {},
       csslint: {},
       imports: void 0
     });
 
     var result = {};
 
-    var lessFile = new LessFile(_this.fileSrc, _this.fileContents, _this.rules, _this.options);
+    var lessFile = new StyleFile(_this.fileSrc, _this.fileContents, _this.rules, _this.options);
     lessFile.lint(function (_err, _result) {
-      if (_err != null) return {"error": _err};
-
-      result = _result;
+      if (_err != null) result.error = _err;
+      else result = _result;
     });
+
+    if (result.error) return result;
 
     return {"result": processResult(_this.fileSrc, result)};
   };
@@ -40,13 +42,18 @@
   function processResult(filePath, result) {
     result || (result = {});
     var lintResult = result.lint;
-
     if (lintResult && result.sourceMap) {
       var sourceMap = new SourceMapConsumer(result.sourceMap);
 
       var filteredMessages = filterImportsMessages(filePath, lintResult.messages, sourceMap);
-      injectLessPosition(filteredMessages, sourceMap);
-      adjustMessagePosition(lintResult.messages);
+
+      //TODO: this should go inside the file or the parser
+      if (_.endsWith(filePath, ".less")) {
+        injectLessPosition(filteredMessages, sourceMap);
+        adjustMessagePosition(lintResult.messages);
+      } else if (_.endsWith(filePath, ".scss")) {
+        injectSassPosition(filePath, lintResult.messages, sourceMap)
+      }
     }
 
     return lintResult;
@@ -80,15 +87,17 @@
     messages || (messages = []);
     messages.forEach(function (message) {
       if (message.line !== 0 && !message.rollup) {
-        var lessPosition = sourceMap.originalPositionFor({
+        var originalPosition = sourceMap.originalPositionFor({
           line: message.line,
           column: message.col
         });
 
         message.lessLine = {
-          line: lessPosition.line,
-          column: lessPosition.column
+          line: originalPosition.line,
+          column: originalPosition.column
         };
+
+        message.sourceFile = originalPosition.source;
       }
     });
 
@@ -110,6 +119,29 @@
     return messages;
   }
 
-  module.exports = LessLinter;
+  function injectSassPosition(initialSassPath, messages, sourceMap) {
+    messages || (messages = []);
+    messages.forEach(function (message) {
+      if (message.line !== 0 && !message.rollup) {
+        var originalPosition = sourceMap.originalPositionFor({
+          line: message.line,
+          column: message.col
+        });
+
+        message.line = originalPosition.line;
+        message.column = originalPosition.column;
+        message.sourceFile = originalPosition.source;
+
+        var filenameSize = path.basename(initialSassPath).length;
+        var fullPathSize = initialSassPath.length;
+        var resDirectory = initialSassPath.substr(0, fullPathSize - filenameSize);
+        message.sourceFile = path.resolve(resDirectory, message.sourceFile);
+      }
+    });
+
+    return messages;
+  }
+
+  module.exports = StyleLinter;
 
 }).call(this);

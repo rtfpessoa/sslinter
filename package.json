@@ -1,14 +1,21 @@
 {
-  "name":     "lesslinter",
-  "version":  "0.0.1-8",
+  "name":     "sslinter",
+  "version":  "0.0.1",
 
-  "homepage": "https://www.github.com/rtfpessoa/lesslinter",
-  "description": "lesslinter",
+  "homepage": "https://www.github.com/rtfpessoa/sslinter",
+  "description": "Wrapper around CSSLint for LESS and SASS",
   "keywords": [
       "less",
+      "sass",
+      "css",
+      "scss",
       "lint",
       "linter",
-      "tool"
+      "tool",
+      "csslint",
+      "lesslint",
+      "sasslint",
+      "scsslint"
     ],
 
   "author": {
@@ -18,11 +25,11 @@
 
   "repository": {
     "type": "git",
-    "url": "https://www.github.com/rtfpessoa/lesslinter.git"
+    "url": "https://www.github.com/rtfpessoa/sslinter.git"
   },
 
   "bugs": {
-    "url": "https://www.github.com/rtfpessoa/lesslinter/issues"
+    "url": "https://www.github.com/rtfpessoa/sslinter/issues"
   },
 
   "engines": {
@@ -35,10 +42,10 @@
     "test": ""
   },
 
-  "main": "./src/lesslinter.js",
+  "main": "./src/stylesheetlinter.js",
 
   "bin": {
-    "lesslinter": "./src/cli.js"
+    "sslinter": "./src/cli.js"
   },
 
   "dependencies": {
@@ -48,7 +55,8 @@
     "strip-path": "1.0.0",
     "chalk": "1.0.0",
     "source-map": "0.4.2",
-    "pkginfo": "0.3.0"
+    "pkginfo": "0.3.0",
+    "node-sass": "3.0.0"
   },
 
   "devDependencies": {},
@@ -58,7 +66,7 @@
   "licenses": [
     {
       "type": "MIT",
-      "url": "https://github.com/rtfpessoa/lesslinter/blob/master/LICENSE"
+      "url": "https://github.com/rtfpessoa/sslinter/blob/master/LICENSE"
     }
   ],
 

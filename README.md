@@ -1,6 +1,6 @@
-# LessLinter by [rtfpessoa](https://github.com/rtfpessoa)
+# StyleSheetLinter by [rtfpessoa](https://github.com/rtfpessoa)
 
-Thin [CSSLint](https://github.com/CSSLint/csslint.git) wrapper to support LESS.
+Thin [CSSLint](https://github.com/CSSLint/csslint.git) wrapper to support LESS and SASS.
 
 Fully [CSSLint](https://github.com/CSSLint/csslint.git) CLI compatible.
 
@@ -11,7 +11,7 @@ Fully [CSSLint](https://github.com/CSSLint/csslint.git) CLI compatible.
 
 ## Usage
 
-    Usage: lesslinter [options]* [file|dir]*
+    Usage: sslinter [options]* [file|dir]*
     
     Global Options
       --help                                   Displays this information.
@@ -36,6 +36,7 @@ Copyright 2015 Rodrigo Fernandes. Released under the terms of the MIT license.
 
 ### Thanks
 
-I would like to thank the [CSSLint](https://github.com/CSSLint/csslint) team for creating such a great tool
-and also [jgable](https://github.com/jgable) for [grunt-lesslint](https://github.com/jgable/grunt-lesslint)
-which was used as inspiration for this tool.
+I would like to thank the [CSSLint](https://github.com/CSSLint/csslint) team for creating such a great tool,
+[jgable](https://github.com/jgable) for [grunt-lesslint](https://github.com/jgable/grunt-lesslint)
+which was used as inspiration for this tool and also both [less](https://www.npmjs.com/package/less) and
+[node-sass](https://www.npmjs.com/package/node-sass) creator wich provided great parsing tools.
