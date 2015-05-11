@@ -34,18 +34,15 @@
 function cli(api) {
 
   var globalOptions = {
-    "help": {"format": "", "description": "Displays this information."},
-    "format": {"format": "<format>", "description": "Indicate which format to use for output."},
-    "list-rules": {"format": "", "description": "Outputs all of the rules available."},
-    "quiet": {"format": "", "description": "Only output when errors are present."},
-    "errors": {"format": "<rule[,rule]+>", "description": "Indicate which rules to include as errors."},
-    "warnings": {"format": "<rule[,rule]+>", "description": "Indicate which rules to include as warnings."},
-    "ignore": {"format": "<rule[,rule]+>", "description": "Indicate which rules to ignore completely."},
-    "exclude-list": {
-      "format": "<file|dir[,file|dir]+>",
-      "description": "Indicate which files/directories to exclude from being linted."
-    },
-    "version": {"format": "", "description": "Outputs the current version number."}
+    "help"        : { "format" : "",                       "description" : "Displays this information."},
+    "format"      : { "format" : "<format>",               "description" : "Indicate which format to use for output."},
+    "list-rules"  : { "format" : "",                       "description" : "Outputs all of the rules available."},
+    "quiet"       : { "format" : "",                       "description" : "Only output when errors are present."},
+    "errors"      : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to include as errors."},
+    "warnings"    : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to include as warnings."},
+    "ignore"      : { "format" : "<rule[,rule]+>",         "description" : "Indicate which rules to ignore completely."},
+    "exclude-list": { "format" : "<file|dir[,file|dir]+>", "description" : "Indicate which files/directories to exclude from being linted."},
+    "version"     : { "format" : "",                       "description" : "Outputs the current version number."}
   };
 
   //-------------------------------------------------------------------------
@@ -187,12 +184,19 @@ function cli(api) {
     result || (result = {});
     result.messages || (result.messages = []);
 
+    // filter duplicate issues caused by less/sass compilation
+    result.messages = _.uniq(result.messages, function (elem) {
+      return elem.line + elem.message + elem.sourceFile;
+    });
+
     options.fullPath = api.getFullPath(relativeFilePath);
 
+    // group messages by file path
     var messageGroups = _.groupBy(result.messages, function (elem) {
       return elem.sourceFile ? elem.sourceFile : relativeFilePath;
     });
 
+    // output accomulator
     var output = "";
 
     for (var filePath in messageGroups) if (messageGroups.hasOwnProperty(filePath)) {
@@ -202,7 +206,7 @@ function cli(api) {
       output += formatter.formatResults(tmpResult, filePath, options);
     }
 
-    if (output && output != "") api.print(output);
+    if (output.length) api.print(output);
 
     if (result.messages.length > 0 && pluckByType(result.messages, "error").length > 0) {
       exitCode = 3;

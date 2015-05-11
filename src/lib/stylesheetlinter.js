@@ -28,8 +28,8 @@
 
     var result = {};
 
-    var lessFile = new StyleFile(_this.fileSrc, _this.fileContents, _this.rules, _this.options);
-    lessFile.lint(function (_err, _result) {
+    var ssFile = new StyleFile(_this.fileSrc, _this.fileContents, _this.rules, _this.options);
+    ssFile.lint(function (_err, _result) {
       if (_err != null) result.error = _err;
       else result = _result;
     });
@@ -45,48 +45,22 @@
     if (lintResult && result.sourceMap) {
       var sourceMap = new SourceMapConsumer(result.sourceMap);
 
-      var filteredMessages = filterImportsMessages(filePath, lintResult.messages, sourceMap);
-
-      //TODO: this should go inside the file or the parser
       if (_.endsWith(filePath, ".less")) {
-        injectLessPosition(filteredMessages, sourceMap);
-        adjustMessagePosition(lintResult.messages);
+        lintResult.messages = injectLessPosition(lintResult.messages, sourceMap);
       } else if (_.endsWith(filePath, ".scss")) {
-        injectSassPosition(filePath, lintResult.messages, sourceMap)
+        lintResult.messages = injectSassPosition(filePath, lintResult.messages, sourceMap)
+      } else {
+        lintResult.messages = [];
       }
     }
 
     return lintResult;
   }
 
-  function filterImportsMessages(filePath, messages, sourceMap) {
-    return messages.filter(function (message) {
-      if (message.line === 0 || message.rollup) return true;
-
-      var source = sourceMap.originalPositionFor({
-        line: message.line,
-        column: message.col
-      }).source;
-
-      if (source === null) return false;
-
-      source && (source = path.resolve(source));
-
-      var isThisFile = (source === filePath);
-
-      // TODO: respect requested imports
-      //var stripPath = require('strip-path');
-      //var sourceArray = [stripPath(source, process.cwd()), stripPath(source, process.cwd() + '\\')];
-      //return isThisFile || grunt.file.isMatch(_this.options.imports, sourceArray);
-
-      return isThisFile;
-    });
-  }
-
   function injectLessPosition(messages, sourceMap) {
     messages || (messages = []);
-    messages.forEach(function (message) {
-      if (message.line !== 0 && !message.rollup) {
+    return _.map(messages, function (message) {
+      if (message.line > 0 && !message.rollup) {
         var originalPosition = sourceMap.originalPositionFor({
           line: message.line,
           column: message.col
@@ -98,15 +72,12 @@
         };
 
         message.sourceFile = originalPosition.source;
+      } else {
+        // all the generic messages go in the first line
+        message.line = 0;
+        message.col = 0;
       }
-    });
 
-    return messages;
-  }
-
-  function adjustMessagePosition(messages) {
-    messages || (messages = []);
-    messages.forEach(function (message) {
       if (message.lessLine) {
         message.line = message.lessLine.line - 1;
         message.col = message.lessLine.column - 1;
@@ -114,14 +85,14 @@
 
       message.line += 1;
       message.col += 2;
-    });
 
-    return messages;
+      return message;
+    });
   }
 
   function injectSassPosition(initialSassPath, messages, sourceMap) {
     messages || (messages = []);
-    messages.forEach(function (message) {
+    return _.map(messages, function (message) {
       if (message.line !== 0 && !message.rollup) {
         var originalPosition = sourceMap.originalPositionFor({
           line: message.line,
@@ -132,14 +103,19 @@
         message.column = originalPosition.column;
         message.sourceFile = originalPosition.source;
 
+        // convert relative path to absolute path
         var filenameSize = path.basename(initialSassPath).length;
         var fullPathSize = initialSassPath.length;
         var resDirectory = initialSassPath.substr(0, fullPathSize - filenameSize);
         message.sourceFile = path.resolve(resDirectory, message.sourceFile);
+      } else {
+        // all the generic messages go in the first line
+        message.line = 1;
+        message.col = 1;
       }
-    });
 
-    return messages;
+      return message;
+    });
   }
 
   module.exports = StyleLinter;
